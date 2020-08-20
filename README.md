@@ -58,4 +58,4 @@ NegativeBinomial (LogLink)
 
 Note that the first time you fit a model in a given R session it will take a while, as Julia needs to do some setup operations. Subsequent model fits will be much faster.
 
-For more details on the underlying Julia library, see http://dmbates.github.io/MixedModels.jl/latest/index.html.
+For more details on the underlying Julia library, see https://github.com/JuliaStats/MixedModels.jl
