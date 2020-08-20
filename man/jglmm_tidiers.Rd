@@ -6,12 +6,18 @@
 \alias{augment.jglmm}
 \title{Tidying methods for jglmm models}
 \usage{
-\method{tidy}{jglmm}(x)
+\method{tidy}{jglmm}(x, conf.int = FALSE, conf.level = 0.95, ...)
 
 \method{augment}{jglmm}(x)
 }
 \arguments{
 \item{x}{An object of class `jglmm`, as returned by `jglmm`.}
+
+\item{conf.int}{include confidence interval?}
+
+\item{conf.level}{confidence level}
+
+\item{...}{extra arguments (ignored)}
 }
 \value{
 `tidy` returns a tibble of fixed effect estimates

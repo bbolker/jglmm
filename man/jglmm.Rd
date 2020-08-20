@@ -4,8 +4,15 @@
 \alias{jglmm}
 \title{Fitting Generalized Linear Mixed-Effects Models in Julia}
 \usage{
-jglmm(formula, data, family = "normal", link = NULL, weights = NULL,
-  contrasts = NULL)
+jglmm(
+  formula,
+  data,
+  family = "normal",
+  link = NULL,
+  weights = NULL,
+  contrasts = NULL,
+  return_val = c("jglmm", "julia_model_str")
+)
 }
 \arguments{
 \item{formula}{A two-sided linear formula object describing both the
@@ -26,6 +33,8 @@ separating expressions for design matrices from grouping factors.}
 \item{contrasts}{(optional) A named list mapping column names of categorical
 variables in data to coding schemes (defauls to dummy coding all
 categorical variables).}
+
+\item{return_val}{return fitted model ("jglmm") or just Julia model string ("julia_model_str")?}
 }
 \value{
 An object of class `jglmm`.

@@ -1,10 +1,12 @@
 utils::globalVariables(c("."))
 
-#' @importFrom dplyr "%>%"
+#' @importFrom dplyr "%>%" mutate
 #' @importFrom glue glue
 #' @importFrom generics augment tidy
 #' @importFrom JuliaCall julia_assign julia_command julia_eval
 #' @importFrom rlang .data
+#' @importFrom stats qnorm
+
 NULL
 
 
@@ -34,6 +36,7 @@ jglmm_setup <- function() {
 #' @param contrasts (optional) A named list mapping column names of categorical
 #'   variables in data to coding schemes (defauls to dummy coding all
 #'   categorical variables).
+#' @param return_val return fitted model ("jglmm") or just Julia model string ("julia_model_str")?
 #'
 #' @return An object of class `jglmm`.
 #' @export
@@ -51,8 +54,10 @@ jglmm_setup <- function() {
 #'              weights = cbpp$size, contrasts = list(period = "effects"))
 #' }
 jglmm <- function(formula, data, family = "normal", link = NULL, weights = NULL,
-                  contrasts = NULL) {
+                  contrasts = NULL,
+                  return_val=c("jglmm","julia_model_str")) {
 
+  return_val <- match.arg(return_val)
   stopifnot(
     family %in% c("bernoulli", "binomial", "gamma", "normal", "poisson"),
     link %in% c("cauchit", "cloglog", "identity", "inverse", "logit", "log",
@@ -67,14 +72,16 @@ jglmm <- function(formula, data, family = "normal", link = NULL, weights = NULL,
   # construct model arguments
   model_args <- c("formula", "data")
 
+  Family <- stringr::str_to_title(family)
+  Link <- stringr::str_to_title(link)
   # choose between LinearMixedModel and GeneralizedLinearMixedModel
-  if (family == "normal" & (is.null(link) || link == "identity")) {
+  if (family == "normal" && (is.null(link) || link == "identity")) {
     model_fun <- "MixedModels.LinearMixedModel"
   } else {
     model_fun <- "MixedModels.GeneralizedLinearMixedModel"
-    model_args <- c(model_args, glue("{stringr::str_to_title(family)}()"))
+    model_args <- c(model_args, glue("{Family}()"))
     if (!is.null(link)) {
-      model_args <- c(model_args, glue("{stringr::str_to_title(link)}Link()"))
+      model_args <- c(model_args, glue("{Link}Link()"))
     }
   }
 
@@ -91,10 +98,13 @@ jglmm <- function(formula, data, family = "normal", link = NULL, weights = NULL,
     model_args <- c(model_args, "wts = weights")
   }
 
-  # set up and fit model
-  model <- julia_eval(glue("fit({model_fun}, {paste(model_args, collapse = ', ')})"))
+  ## set up and fit model
+  julia_model_str <- glue("fit({model_fun}, {paste(model_args, collapse = ', ')})")
+  if (return_val=="julia_model_str") return(julia_model_str)
+  model <- julia_eval(julia_model_str)
 
   results <- list(formula = formula, data = data, model = model)
+  attr(results,"julia_model") <- julia_model_str
   class(results) <- "jglmm"
   return(results)
 
@@ -119,19 +129,30 @@ NULL
 #' @rdname jglmm_tidiers
 #'
 #' @return `tidy` returns a tibble of fixed effect estimates
-#'
+#' @param conf.int include confidence interval?
+#' @param conf.level confidence level
+#' @param ... extra arguments (ignored)
 #' @export
-tidy.jglmm <- function(x) {
+tidy.jglmm <- function(x, conf.int=FALSE, conf.level=0.95, ...) {
+  ## utils::globalVariables(c("estimate", "std.error")) ## induces dependence on R > 2.15.1 ..
+  ## and isn't working as expected to suppress NOTEs?  
+  estimate <- std.error <- NULL  
   julia_assign("model", x$model)
   julia_command("coef = coeftable(model);")
   julia_command("coef_df = DataFrame(coef.cols);")
   julia_command("names!(coef_df, [ Symbol(nm) for nm in coef.colnms ]);")
   julia_command("coef_df[!, :term] = coef.rownms;")
-  julia_eval("coef_df") %>%
-    dplyr::as_tibble() %>%
-    dplyr::select(.data$term, estimate = .data$Estimate,
+  r <- julia_eval("coef_df") %>%
+      dplyr::as_tibble() %>%
+      dplyr::select(.data$term, estimate = .data$Estimate,
                   std.error = .data$Std.Error, z.value = .data$`z value`,
                   p.value = .data$`P(>|z|)`)
+  if (conf.int) {
+      qn <- qnorm((1+conf.level)/2)
+      r <- r %>%
+          dplyr::mutate(conf.low=estimate-qn*std.error, conf.high=estimate+qn*std.error)
+  }
+  return(r)
 }
 
 #' @rdname jglmm_tidiers
