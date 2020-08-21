@@ -156,7 +156,7 @@ tidy.jglmm <- function(x, conf.int=FALSE, conf.level=0.95, ...) {
   julia_assign("model", x$model)
   julia_command("coef = coeftable(model);")
   julia_command("coef_df = DataFrame(coef.cols);")
-  julia_command("names!(coef_df, [ Symbol(nm) for nm in coef.colnms ]);")
+  julia_command("rename!(coef_df, coef.colnms, makeunique = true);")
   julia_command("coef_df[!, :term] = coef.rownms;")
   r <- julia_eval("coef_df") %>%
       dplyr::as_tibble() %>%
