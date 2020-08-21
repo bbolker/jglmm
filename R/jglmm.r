@@ -6,18 +6,34 @@ utils::globalVariables(c("."))
 #' @importFrom JuliaCall julia_assign julia_command julia_eval
 #' @importFrom rlang .data
 #' @importFrom stats qnorm
-
 NULL
 
+julia_libraries <- c("MixedModels", "DataFrames", "StatsModels")
 
 #' Set up Julia and required libraries
 #'
+#' @param run_glmm_model (logical): run simple GLMM so JIT compilation gets done (speed up timing of subsequent models)
+#' @param quietly print progress messages?
 #' @export
-jglmm_setup <- function() {
-  JuliaCall::julia_setup()
-  JuliaCall::julia_library("MixedModels")
-  JuliaCall::julia_library("DataFrames")
-  JuliaCall::julia_library("StatsModels")
+jglmm_setup <- function(run_glmm_model=FALSE, quietly=FALSE) {
+  ## FIXME: add more messages, plus 'quiet
+  JuliaCall::julia_setup(verbose=!quietly)
+  for (lib in julia_libraries) {
+      JuliaCall::julia_library(lib)
+  }
+  if (run_glmm_model) {
+      if (!requireNamespace("lme4")) {
+          warning("lme4 not available, skipping glmm shakedown run")
+      } else {
+          message("running glmm shakedown model ...")
+          ## avoid NSE ...
+          cbpp <- lme4::cbpp
+          cbpp$prop <- cbpp$incidence / cbpp$size
+          j <- jglmm(prop ~ period + (1 | herd), data = cbpp, family = "binomial",
+                weights = cbpp$size)
+      }
+  } ## run_glmm_model
+    invisible(NULL)
 }
 
 

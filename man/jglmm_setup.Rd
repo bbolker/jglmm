@@ -4,7 +4,12 @@
 \alias{jglmm_setup}
 \title{Set up Julia and required libraries}
 \usage{
-jglmm_setup()
+jglmm_setup(run_glmm_model = FALSE, quietly = FALSE)
+}
+\arguments{
+\item{run_glmm_model}{(logical): run simple GLMM so JIT compilation gets done (speed up timing of subsequent models)}
+
+\item{quietly}{print progress messages?}
 }
 \description{
 Set up Julia and required libraries
