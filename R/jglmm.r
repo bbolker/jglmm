@@ -8,18 +8,26 @@ utils::globalVariables(c("."))
 #' @importFrom stats qnorm
 NULL
 
-julia_libraries <- c("MixedModels", "DataFrames", "StatsModels")
+julia_packages <- c("MixedModels", "DataFrames", "StatsModels")
 
-#' Set up Julia and required libraries
+#' Set up Julia and required packages
 #'
 #' @param run_glmm_model (logical): run simple GLMM so JIT compilation gets done (speed up timing of subsequent models)
+#' @param install_packages install necessary Julia packages if needed?
 #' @param quietly print progress messages?
+#' 
 #' @export
-jglmm_setup <- function(run_glmm_model=FALSE, quietly=FALSE) {
+jglmm_setup <- function(run_glmm_model=FALSE, quietly=FALSE,
+                        install_packages=TRUE) {
   ## FIXME: add more messages, plus 'quiet
   JuliaCall::julia_setup(verbose=!quietly)
-  for (lib in julia_libraries) {
-      JuliaCall::julia_library(lib)
+  if (install_packages) {
+      for (pkg in julia_packages) {
+          JuliaCall::julia_install_package_if_needed(pkg)
+      }
+  }
+  for (pkg in julia_packages) {
+      JuliaCall::julia_library(pkg)
   }
   if (run_glmm_model) {
       if (!requireNamespace("lme4")) {

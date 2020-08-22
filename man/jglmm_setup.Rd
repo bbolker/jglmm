@@ -2,15 +2,17 @@
 % Please edit documentation in R/jglmm.r
 \name{jglmm_setup}
 \alias{jglmm_setup}
-\title{Set up Julia and required libraries}
+\title{Set up Julia and required packages}
 \usage{
-jglmm_setup(run_glmm_model = FALSE, quietly = FALSE)
+jglmm_setup(run_glmm_model = FALSE, quietly = FALSE, install_packages = TRUE)
 }
 \arguments{
 \item{run_glmm_model}{(logical): run simple GLMM so JIT compilation gets done (speed up timing of subsequent models)}
 
 \item{quietly}{print progress messages?}
+
+\item{install_packages}{install necessary Julia packages if needed?}
 }
 \description{
-Set up Julia and required libraries
+Set up Julia and required packages
 }
