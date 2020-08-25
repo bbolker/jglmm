@@ -155,9 +155,10 @@ NULL
 #' @return `tidy` returns a tibble of fixed effect estimates
 #' @param conf.int include confidence interval?
 #' @param conf.level confidence level
+#' @param convert_term convert term names for R consistency
 #' @param ... extra arguments (ignored)
 #' @export
-tidy.jglmm <- function(x, conf.int=FALSE, conf.level=0.95, ...) {
+tidy.jglmm <- function(x, conf.int=FALSE, conf.level=0.95, convert_terms=TRUE, ...) {
   ## utils::globalVariables(c("estimate", "std.error")) ## induces dependence on R > 2.15.1 ..
   ## and isn't working as expected to suppress NOTEs?  
   estimate <- std.error <- NULL  
@@ -166,15 +167,23 @@ tidy.jglmm <- function(x, conf.int=FALSE, conf.level=0.95, ...) {
   julia_command("coef_df = DataFrame(coef.cols);")
   julia_command("rename!(coef_df, coef.colnms, makeunique = true);")
   julia_command("coef_df[!, :term] = coef.rownms;")
-  r <- julia_eval("coef_df") %>%
+  r <- julia_eval("coef_df")
+  ## extract estimate (names changed between 2.  
+  est <- r[[grep("(Coef.|Estimate)",names(r))]]
+  r <- r  %>%
       dplyr::as_tibble() %>%
-      dplyr::select(.data$term, estimate = .data$Estimate,
-                  std.error = .data$Std.Error, z.value = .data$`z value`,
-                  p.value = .data$`P(>|z|)`)
+      dplyr::select(.data$term, estimate = est,
+                    std.error = .data$Std.Error,
+                    z.value = .data$`z value`,
+                    p.value = .data$`P(>|z|)`)
   if (conf.int) {
       qn <- qnorm((1+conf.level)/2)
       r <- r %>%
           dplyr::mutate(conf.low=estimate-qn*std.error, conf.high=estimate+qn*std.error)
+  }
+  if (convert_terms) {
+      r <- r %>% mutate(term=~stringr::str_remove_all(term,"(: | )"),
+                        term=str_replace(term,"&",":"))
   }
   return(r)
 }
