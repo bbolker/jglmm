@@ -168,22 +168,25 @@ tidy.jglmm <- function(x, conf.int=FALSE, conf.level=0.95, convert_terms=TRUE, .
   julia_command("rename!(coef_df, coef.colnms, makeunique = true);")
   julia_command("coef_df[!, :term] = coef.rownms;")
   r <- julia_eval("coef_df")
-  ## extract estimate (names changed between 2.  
-  est <- r[[grep("(Coef.|Estimate)",names(r))]]
+  ## extract estimate (names changed between 2.3 and 3.0)
+  est <-  r[[grep("(Coef.|Estimate)",names(r))]]
+  se <-   r[[grep("Std. ?Error",names(r))]]
+  zval <- r[[grep("^z",names(r))]]
+  pval <- r[[grep("P[r]?(>|z|)",names(r))]]
   r <- r  %>%
       dplyr::as_tibble() %>%
-      dplyr::select(.data$term, estimate = est,
-                    std.error = .data$Std.Error,
-                    z.value = .data$`z value`,
-                    p.value = .data$`P(>|z|)`)
+      dplyr::transmute(term=.data$term, estimate = est,
+                       std.error = se,
+                       z.value = zval,
+                       p.value = pval)
   if (conf.int) {
       qn <- qnorm((1+conf.level)/2)
       r <- r %>%
           dplyr::mutate(conf.low=estimate-qn*std.error, conf.high=estimate+qn*std.error)
   }
   if (convert_terms) {
-      r <- r %>% mutate(term=~stringr::str_remove_all(term,"(: | )"),
-                        term=str_replace(term,"&",":"))
+      r <- r %>% mutate(term=stringr::str_remove_all(term,"(: | )"),
+                        term=stringr::str_replace(term,"&",":"))
   }
   return(r)
 }
